@@ -296,6 +296,20 @@ public class VoiceConnection extends Connection {
         Log.d(TAG, "[VoiceConnection] onStopRtt called");
     }
 
+    private void launchApp() {
+        try {
+            Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage("com.fchatapp");
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                context.startActivity(launchIntent);
+            } else {
+                Log.e(TAG, "[VoiceConnection] Launch intent is null");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "[VoiceConnection] Failed to launch app: " + e.getMessage());
+        }
+    }
+
     private void _onAnswer(int videoState) {
         Log.d(TAG, "[VoiceConnection] onAnswer called, videoState: " + videoState + ", answered: " + answered);
         // On some device (like Huawei P30 lite), both onAnswer() and onAnswer(int) are called
@@ -311,6 +325,8 @@ public class VoiceConnection extends Connection {
         sendCallRequestToActivity(ACTION_ANSWER_CALL, handle);
         sendCallRequestToActivity(ACTION_AUDIO_SESSION, handle);
         Log.d(TAG, "[VoiceConnection] onAnswer executed");
+
+        launchApp();
     }
 
     private void _onReject(int rejectReason, String replyMessage) {

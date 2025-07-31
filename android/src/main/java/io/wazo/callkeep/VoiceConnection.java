@@ -298,31 +298,56 @@ public class VoiceConnection extends Connection {
     }
 
     private void launchApp() {
-    try {
-        // Check if the app is already running
+        try {
+            // Check if the app is running in the foreground or background
+            boolean isAppRunning = isAppRunning("com.fchatapp");
+
+            if (isAppRunning) {
+                Log.d(TAG, "[VoiceConnection] App is already running");
+                return; // Do nothing if the app is already running
+            }
+
+            // Launch the app if it is not running
+            Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage("com.fchatapp");
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                context.startActivity(launchIntent);
+                Log.d(TAG, "[VoiceConnection] App launched successfully");
+            } else {
+                Log.e(TAG, "[VoiceConnection] Launch intent is null");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "[VoiceConnection] Failed to launch app: " + e.getMessage());
+        }
+    }
+
+    private boolean isAppRunning(String packageName) {
         ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-        if (activityManager != null) {
-            for (ActivityManager.RunningAppProcessInfo processInfo : activityManager.getRunningAppProcesses()) {
-                if (processInfo.processName.equals("com.fchatapp")) {
-                    Log.d(TAG, "[VoiceConnection] App is already running");
-                    return; // Do nothing if the app is already running
+        if (activityManager == null) {
+            return false;
+        }
+
+        // Check running app processes
+        List<ActivityManager.RunningAppProcessInfo> runningProcesses = activityManager.getRunningAppProcesses();
+        if (runningProcesses != null) {
+            for (ActivityManager.RunningAppProcessInfo processInfo : runningProcesses) {
+                if (processInfo.processName.equals(packageName)) {
+                    return true; // App is running
                 }
             }
         }
 
-        // Launch the app if it is not running
-        Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage("com.fchatapp");
-        if (launchIntent != null) {
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            context.startActivity(launchIntent);
-            Log.d(TAG, "[VoiceConnection] App launched successfully");
-        } else {
-            Log.e(TAG, "[VoiceConnection] Launch intent is null");
+        // Check running tasks (for older Android versions)
+        List<ActivityManager.RunningTaskInfo> runningTasks = activityManager.getRunningTasks(1);
+        if (runningTasks != null && !runningTasks.isEmpty()) {
+            ActivityManager.RunningTaskInfo taskInfo = runningTasks.get(0);
+            if (taskInfo.topActivity != null && taskInfo.topActivity.getPackageName().equals(packageName)) {
+                return true; // App is running
+            }
         }
-    } catch (Exception e) {
-        Log.e(TAG, "[VoiceConnection] Failed to launch app: " + e.getMessage());
+
+        return false; // App is not running
     }
-}
 
     private void _onAnswer(int videoState) {
         Log.d(TAG, "[VoiceConnection] onAnswer called, videoState: " + videoState + ", answered: " + answered);
